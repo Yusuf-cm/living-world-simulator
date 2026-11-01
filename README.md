@@ -10,6 +10,8 @@ https://living-world-simulator.onrender.com
 - Seeded 3D noise ported from Wild Deck `feature/world-engine-v2`'s `PlanetSurfaceGenerator` (the V2 surface delegates macro relief to this V1 generator)
 - Latitude/altitude/moisture biome logic adapted from `PlanetClimateV2`
 - Oceans, land elevation, alpine relief, tundra, deserts, forests and rainforests
+- Higher-density globe mesh, multi-scale surface relief and biome color variation
+- Seeded spatial cloud-opacity texture with weather-band structure, instead of a uniformly opaque shell
 - Rotatable globe, zoom, click-to-inspect biome, elevation and baseline climate
 - Adjustable time, tilt, warming control (visual UI only for warming), and stylized clouds
 
