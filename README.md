@@ -1,28 +1,23 @@
 # Living World Simulator
 
-An independent, browser-based 3D terrain sandbox (not Wild Deck).
+A standalone 3D spherical world experiment. **Wild Deck is not modified.**
 
-## Live site
+## Live
 https://living-world-simulator.onrender.com
 
-## Features
-- Seed-based, procedurally generated 3D terrain with mountains, valleys, islands, beaches and water
-- Forest meshes distributed according to elevation
-- Orbit camera and WASD/Q/E fly navigation
-- Adjustable simulated day/night speed, seasons and solar position
-- Moving stylized clouds, storm activity, climate warming slider
-- Terrain inspection showing estimated elevation, temperature and humidity
+## Current implementation
+- True spherical, displaced terrain mesh, not a flat terrain patch or plain colored sphere
+- Seeded 3D noise ported from Wild Deck `feature/world-engine-v2`'s `PlanetSurfaceGenerator` (the V2 surface delegates macro relief to this V1 generator)
+- Latitude/altitude/moisture biome logic adapted from `PlanetClimateV2`
+- Oceans, land elevation, alpine relief, tundra, deserts, forests and rainforests
+- Rotatable globe, zoom, click-to-inspect biome, elevation and baseline climate
+- Adjustable time, tilt, warming control (visual UI only for warming), and stylized clouds
 
-## Controls
-Drag: orbit camera. Mouse wheel: zoom. WASD: fly. Q/E: descend/ascend. Shift: faster movement. Click terrain: inspect. Change seed and press Generate world for new geography.
+## Run
+`python -m http.server 8000` then open http://localhost:8000.
 
-## Local development
-```bash
-python -m http.server 8000
-```
-Open http://localhost:8000. Internet is required for the Three.js CDN.
+## Important limitations
+This is an initial *globe viewer*, not the complete Wild Deck simulation. Hydrology classes, rivers, lake geometry, sediment, tectonics, resource layers, live atmospheric physics, fine terrain streaming and surface traversal are **not integrated**. The Java engine is the source of the ported algorithms; this browser build runs its own JavaScript implementation, so exact numerical parity is not yet verified. The globe requires WebGL and may take several seconds to generate. No persistence or backend.
 
-## Current limitations
-The terrain is a finite heightfield, not a complete spherical planet. Units are illustrative. Climate is heuristic; cloud movement is visual rather than a fluid-dynamics simulation. No river hydrology, persistence, weather-driven terrain changes, or collision-aware character controller yet. A browser GPU is required.
-
-Render hosts the static site and automatically redeploys on main branch updates.
+## Source
+Wild Deck reference branch: https://github.com/Yusuf-cm/wild-deck/tree/feature/world-engine-v2
