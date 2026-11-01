@@ -1,20 +1,28 @@
 # Living World Simulator
 
-Standalone interactive 3D planet sandbox, separate from Wild Deck.
+An independent, browser-based 3D terrain sandbox (not Wild Deck).
+
+## Live site
+https://living-world-simulator.onrender.com
 
 ## Features
-- Orbit and zoom a 3D planet
-- Adjustable day/night time simulation
-- Axial tilt and seasons
-- Latitude-based temperature estimates and warming offset
-- Moving cloud shell and stylized storms
-- Click regions to inspect simulated climate
+- Seed-based, procedurally generated 3D terrain with mountains, valleys, islands, beaches and water
+- Forest meshes distributed according to elevation
+- Orbit camera and WASD/Q/E fly navigation
+- Adjustable simulated day/night speed, seasons and solar position
+- Moving stylized clouds, storm activity, climate warming slider
+- Terrain inspection showing estimated elevation, temperature and humidity
 
-## Run
-Serve this folder with `python -m http.server 8000` and visit http://localhost:8000. Internet required for Three.js CDN.
+## Controls
+Drag: orbit camera. Mouse wheel: zoom. WASD: fly. Q/E: descend/ascend. Shift: faster movement. Click terrain: inspect. Change seed and press Generate world for new geography.
 
-## Planet mesh
-The original procedural planet mesh is not yet committed. To use it, add the previously downloaded `procedural_world_terrain.glb` as `assets/planet.glb`. Until then, the viewer displays a fallback sphere.
+## Local development
+```bash
+python -m http.server 8000
+```
+Open http://localhost:8000. Internet is required for the Three.js CDN.
 
-## Limitations
-Weather is illustrative, not fluid dynamics. No hydrology, precipitation accumulation, erosion, or persistence.
+## Current limitations
+The terrain is a finite heightfield, not a complete spherical planet. Units are illustrative. Climate is heuristic; cloud movement is visual rather than a fluid-dynamics simulation. No river hydrology, persistence, weather-driven terrain changes, or collision-aware character controller yet. A browser GPU is required.
+
+Render hosts the static site and automatically redeploys on main branch updates.
