@@ -1,0 +1,36 @@
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const $=id=>document.getElementById(id);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x030915);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.01,500);camera.position.set(0,1.8,4.2);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=1.13;controls.maxDistance=18;
+scene.add(new THREE.AmbientLight(0x8094c2,.6));const sunlight=new THREE.DirectionalLight(0xfff4df,2.8);scene.add(sunlight);
+const planet=new THREE.Group();scene.add(planet);let mesh,clouds,seed=20261101,minutes=720,paused=false,last=performance.now();
+const mask=(1n<<64n)-1n;
+function mix(v){v=(v^(v>>30n))*0xbf58476d1ce4e5b9n&mask;v=(v^(v>>27n))*0x94d049bb133111ebn&mask;return (v^(v>>31n))&mask}
+function key(index){return mix((BigInt(seed)&mask)^((BigInt(index)*0x9e3779b97f4a7c15n)&mask))}
+function lattice(k,x,y,z){const v=mix(k^((BigInt(x)*0x9e3779b97f4a7c15n)&mask)^((BigInt(y)*0xd1b54a32d192ed03n)&mask)^((BigInt(z)*0x94d049bb133111ebn)&mask));return Number(v>>11n)/9007199254740992*2-1}
+const fade=t=>t*t*t*(t*(t*6-15)+10),lerp=(a,b,t)=>a+(b-a)*t,clamp=x=>Math.max(0,Math.min(1,x));
+function noise(k,x,y,z){const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),fx=fade(x-ix),fy=fade(y-iy),fz=fade(z-iz);
+const a=lerp(lerp(lattice(k,ix,iy,iz),lattice(k,ix+1,iy,iz),fx),lerp(lattice(k,ix,iy+1,iz),lattice(k,ix+1,iy+1,iz),fx),fy);
+const b=lerp(lerp(lattice(k,ix,iy,iz+1),lattice(k,ix+1,iy,iz+1),fx),lerp(lattice(k,ix,iy+1,iz+1),lattice(k,ix+1,iy+1,iz+1),fx),fy);return lerp(a,b,fz)}
+function fractal(k,x,y,z,n){let s=0,w=1,total=0;for(let i=0;i<n;i++){s+=noise(mix((k+BigInt(i))&mask),x,y,z)*w;total+=w;x*=2;y*=2;z*=2;w*=.5}return s/total}
+let keys={};function initKeys(){keys={land:key(1),detail:key(2),ridge:key(3),warp:[key(10),key(11),key(12)],moisture:key(0x434c494d415445n)}}
+function sample(x,y,z){const wx=x+.25*fractal(keys.warp[0],x*1.4,y*1.4,z*1.4,2),wy=y+.25*fractal(keys.warp[1],x*1.4,y*1.4,z*1.4,2),wz=z+.25*fractal(keys.warp[2],x*1.4,y*1.4,z*1.4,2);
+const continent=fractal(keys.land,wx*1.7,wy*1.7,wz*1.7,4)-.035,detail=fractal(keys.detail,x*11,y*11,z*11,3),ridge=Math.pow(1-Math.abs(noise(keys.ridge,x*6,y*6,z*6)),4);
+let elevation=(continent+.035*detail)*15000;if(elevation>0)elevation+=ridge*3000*clamp(continent/.2);elevation=Math.max(-11000,Math.min(9000,Math.round(elevation)));
+const latitude=Math.asin(z)*180/Math.PI,temp=30-55*Math.pow(Math.abs(latitude)/90,1.35)-.0065*Math.max(0,elevation),dry=Math.exp(-Math.pow((Math.abs(latitude)-28)/15,2));
+const moisture=clamp(.32+.42*(noise(keys.moisture,x*4,y*4,z*4)*.5+.5)-.30*dry);
+let biome=elevation<=0?'OCEAN':temp< -12?'ICE':elevation>3000?'ALPINE':temp<0?'TUNDRA':moisture<.22?'DESERT':moisture<.43?'GRASSLAND':temp>20&&moisture>.67?'RAINFOREST':'FOREST';
+return {elevation,latitude,temperature:temp,moisture,biome}}
+const palette={OCEAN:0x17476d,ICE:0xe8f5f8,ALPINE:0x8b8a87,TUNDRA:0x9aa995,DESERT:0xd9bd82,GRASSLAND:0x8ea45c,RAINFOREST:0x176c43,FOREST:0x3b784a};
+function generate(){seed=Number($('seed')?.value)||20261101;initKeys();if(mesh){planet.remove(mesh);mesh.geometry.dispose();mesh.material.dispose()}if(clouds){planet.remove(clouds);clouds.geometry.dispose();clouds.material.dispose()}
+const g=new THREE.SphereGeometry(1,256,160),p=g.attributes.position,colors=new Float32Array(p.count*3);let land=0;
+for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),len=Math.hypot(x,y,z),nx=x/len,ny=z/len,nz=y/len;const s=sample(nx,ny,nz);const r=1+Math.max(0,s.elevation)/9000*.075+Math.min(0,s.elevation)/11000*.012;p.setXYZ(i,nx*r,nz*r,ny*r);const col=new THREE.Color(palette[s.biome]);if(s.biome==='OCEAN'){col.setHex(0x164c77).lerp(new THREE.Color(0x268bb3),clamp((s.elevation+11000)/11000)*.65)}else land++;colors.set([col.r,col.g,col.b],i*3)}
+g.setAttribute('color',new THREE.BufferAttribute(colors,3));g.computeVertexNormals();mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));planet.add(mesh);
+clouds=new THREE.Mesh(new THREE.SphereGeometry(1.082,128,80),new THREE.MeshStandardMaterial({color:0xdceaf7,transparent:true,opacity:.11,depthWrite:false,roughness:1}));planet.add(clouds);$('info').textContent='World seed '+seed+' • '+(land/p.count*100).toFixed(1)+'% land vertices • click terrain to inspect';}
+$('regen').onclick=generate;$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'Resume':'Pause'};$('reset').onclick=()=>{minutes=720};for(const id of ['speed','tilt','warm','storm'])$(id).oninput=()=>$(id+'v').textContent=$(id).value;
+generate();const stars=new THREE.BufferGeometry(),points=[];for(let i=0;i<1200;i++){const a=Math.random()*Math.PI*2,z=Math.random()*2-1,r=70;points.push(r*Math.sqrt(1-z*z)*Math.cos(a),r*z,r*Math.sqrt(1-z*z)*Math.sin(a))}stars.setAttribute('position',new THREE.Float32BufferAttribute(points,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0x9ab3d3,size:.08,sizeAttenuation:false})));
+function frame(now){requestAnimationFrame(frame);const dt=Math.min(.08,(now-last)/1000);last=now;if(!paused)minutes+=dt*Number($('speed').value);const day=Math.floor(minutes/1440),hour=(minutes%1440)/60,year=Math.floor(day/365)+1;planet.rotation.y=minutes/1440*Math.PI*2;planet.rotation.z=Number($('tilt').value)*Math.PI/180;sunlight.position.set(Math.cos(day/365*Math.PI*2)*8,1.5,Math.sin(day/365*Math.PI*2)*8);clouds.visible=$('clouds').checked;clouds.rotation.y+=dt*.008;clouds.material.opacity=.05+Number($('storm').value)/500;$('clock').textContent='Year '+year+' • Day '+(day%365+1)+' • '+String(Math.floor(hour)).padStart(2,'0')+':'+String(Math.floor(hour%1*60)).padStart(2,'0');controls.update();renderer.render(scene,camera)}requestAnimationFrame(frame);
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();renderer.domElement.addEventListener('click',e=>{mouse.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(mouse,camera);const hit=ray.intersectObject(mesh)[0];if(!hit)return;const pt=planet.worldToLocal(hit.point.clone()).normalize();const s=sample(pt.x,pt.z,pt.y),lon=Math.atan2(pt.z,pt.x)*180/Math.PI;$('info').innerHTML='<strong>'+s.biome+'</strong><br>Latitude: '+s.latitude.toFixed(2)+'°<br>Longitude: '+lon.toFixed(2)+'°<br>Elevation: '+s.elevation+' m<br>Baseline temperature: '+s.temperature.toFixed(1)+'°C<br>Moisture index: '+s.moisture.toFixed(2)+'<br><small>Terrain follows Wild Deck v1 sampling equations; climate is a baseline estimate.</small>'});addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
